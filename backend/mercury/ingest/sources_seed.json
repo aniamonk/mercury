@@ -1,0 +1,402 @@
+[
+  {
+    "source_id": "bbc_europe",
+    "name": "BBC Europe",
+    "source_type": "broadcaster",
+    "country": "UK",
+    "language": "en",
+    "political_leaning": "centrist",
+    "feed_url": "http://feeds.bbci.co.uk/news/world/europe/rss.xml",
+    "notes": "Known-good RSS feed."
+  },
+  {
+    "source_id": "guardian",
+    "name": "The Guardian",
+    "source_type": "newspaper",
+    "country": "UK",
+    "language": "en",
+    "political_leaning": "left-leaning",
+    "feed_url": "https://www.theguardian.com/world/rss",
+    "notes": "Known-good RSS feed."
+  },
+  {
+    "source_id": "sky_news",
+    "name": "Sky News",
+    "source_type": "broadcaster",
+    "country": "UK",
+    "language": "en",
+    "political_leaning": "centrist",
+    "feed_url": "https://feeds.skynews.com/feeds/rss/world.xml",
+    "notes": "Known-good RSS feed."
+  },
+  {
+    "source_id": "deutsche_welle",
+    "name": "Deutsche Welle",
+    "source_type": "broadcaster",
+    "country": "Germany",
+    "language": "en",
+    "political_leaning": "centrist",
+    "feed_url": "https://rss.dw.com/rdf/rss-en-world",
+    "notes": "Known-good RSS feed."
+  },
+  {
+    "source_id": "euronews",
+    "name": "Euronews",
+    "source_type": "broadcaster",
+    "country": "EU",
+    "language": "en",
+    "political_leaning": "centrist",
+    "feed_url": "https://www.euronews.com/rss?level=theme&name=news",
+    "notes": "Known-good RSS feed."
+  },
+  {
+    "source_id": "politico_europe",
+    "name": "Politico Europe",
+    "source_type": "publication",
+    "country": "EU",
+    "language": "en",
+    "political_leaning": "centrist",
+    "feed_url": "https://www.politico.eu/feed/",
+    "notes": "Known-good RSS feed."
+  },
+  {
+    "source_id": "france_24",
+    "name": "France 24",
+    "source_type": "broadcaster",
+    "country": "France",
+    "language": "en",
+    "political_leaning": "centrist",
+    "feed_url": "https://www.france24.com/en/rss",
+    "notes": "Known-good RSS feed."
+  },
+  {
+    "source_id": "euractiv",
+    "name": "Euractiv",
+    "source_type": "publication",
+    "country": "EU",
+    "language": "en",
+    "political_leaning": "centrist",
+    "feed_url": "https://www.euractiv.com/feed/",
+    "active": false,
+    "notes": "Known RSS endpoint, but verification returned 403 on 2026-07-08."
+  },
+  {
+    "source_id": "notes_from_poland",
+    "name": "Notes from Poland",
+    "source_type": "publication",
+    "country": "Poland",
+    "language": "en",
+    "political_leaning": "centrist",
+    "feed_url": "https://notesfrompoland.com/feed/",
+    "notes": "Known-good WordPress feed."
+  },
+  {
+    "source_id": "kafkadesk",
+    "name": "Kafkadesk",
+    "source_type": "publication",
+    "country": "Central Europe",
+    "language": "en",
+    "political_leaning": "centrist",
+    "feed_url": "https://kafkadesk.org/feed/",
+    "notes": "Known-good WordPress feed."
+  },
+  {
+    "source_id": "tvn24",
+    "name": "TVN24",
+    "source_type": "broadcaster",
+    "country": "Poland",
+    "language": "pl",
+    "political_leaning": "centrist",
+    "feed_url": "https://tvn24.pl/najnowsze.xml",
+    "notes": "Known-good RSS feed."
+  },
+  {
+    "source_id": "polsat_news",
+    "name": "Polsat News",
+    "source_type": "broadcaster",
+    "country": "Poland",
+    "language": "pl",
+    "political_leaning": "centrist",
+    "feed_url": "https://www.polsatnews.pl/rss/wszystkie.xml",
+    "notes": "Known-good RSS feed."
+  },
+  {
+    "source_id": "reuters",
+    "name": "Reuters",
+    "source_type": "wire",
+    "country": "UK",
+    "language": "en",
+    "political_leaning": "centrist",
+    "feed_url": null,
+    "notes": "No public RSS; seed inactive."
+  },
+  {
+    "source_id": "associated_press",
+    "name": "Associated Press",
+    "source_type": "wire",
+    "country": "US",
+    "language": "en",
+    "political_leaning": "centrist",
+    "feed_url": null,
+    "notes": "No public RSS; seed inactive."
+  },
+  {
+    "source_id": "bloomberg",
+    "name": "Bloomberg",
+    "source_type": "wire",
+    "country": "US",
+    "language": "en",
+    "political_leaning": "centrist",
+    "feed_url": null,
+    "notes": "No public RSS; seed inactive."
+  },
+  {
+    "source_id": "afp",
+    "name": "AFP",
+    "source_type": "wire",
+    "country": "France",
+    "language": "en",
+    "political_leaning": "centrist",
+    "feed_url": null,
+    "notes": "No public RSS; seed inactive."
+  },
+  {
+    "source_id": "the_times",
+    "name": "The Times",
+    "source_type": "newspaper",
+    "country": "UK",
+    "language": "en",
+    "political_leaning": "right-leaning",
+    "feed_url": null,
+    "notes": "No public RSS; seed inactive."
+  },
+  {
+    "source_id": "telegraph",
+    "name": "The Telegraph",
+    "source_type": "newspaper",
+    "country": "UK",
+    "language": "en",
+    "political_leaning": "right-leaning",
+    "feed_url": "https://www.telegraph.co.uk/rss.xml",
+    "active": false,
+    "notes": "Best-guess feed; verification returned 403 on 2026-07-08."
+  },
+  {
+    "source_id": "independent",
+    "name": "The Independent",
+    "source_type": "newspaper",
+    "country": "UK",
+    "language": "en",
+    "political_leaning": "left-leaning",
+    "feed_url": "https://www.independent.co.uk/news/world/rss",
+    "notes": "Best-guess feed; verify before relying on it."
+  },
+  {
+    "source_id": "financial_times",
+    "name": "Financial Times",
+    "source_type": "newspaper",
+    "country": "UK",
+    "language": "en",
+    "political_leaning": "centrist",
+    "feed_url": "https://www.ft.com/rss/home",
+    "notes": "Best-guess feed; verify before relying on it."
+  },
+  {
+    "source_id": "economist",
+    "name": "The Economist",
+    "source_type": "magazine",
+    "country": "UK",
+    "language": "en",
+    "political_leaning": "centrist",
+    "feed_url": "https://www.economist.com/latest/rss.xml",
+    "notes": "Best-guess feed; verify before relying on it."
+  },
+  {
+    "source_id": "gazeta_wyborcza",
+    "name": "Gazeta Wyborcza",
+    "source_type": "newspaper",
+    "country": "Poland",
+    "language": "pl",
+    "political_leaning": "left-leaning",
+    "feed_url": "https://wyborcza.pl/pub/rss/wyborcza_kraj.xml",
+    "active": false,
+    "notes": "Best-guess feed; verification returned 404 on 2026-07-08."
+  },
+  {
+    "source_id": "rzeczpospolita",
+    "name": "Rzeczpospolita",
+    "source_type": "newspaper",
+    "country": "Poland",
+    "language": "pl",
+    "political_leaning": "centrist",
+    "feed_url": "https://www.rp.pl/rss_main",
+    "notes": "Best-guess feed; verify before relying on it."
+  },
+  {
+    "source_id": "wprost",
+    "name": "Wprost",
+    "source_type": "magazine",
+    "country": "Poland",
+    "language": "pl",
+    "political_leaning": "centrist",
+    "feed_url": "https://www.wprost.pl/rss",
+    "notes": "Best-guess feed; verify before relying on it."
+  },
+  {
+    "source_id": "do_rzeczy",
+    "name": "Do Rzeczy",
+    "source_type": "magazine",
+    "country": "Poland",
+    "language": "pl",
+    "political_leaning": "right-leaning",
+    "feed_url": "https://dorzeczy.pl/feed",
+    "notes": "Best-guess feed; verify before relying on it."
+  },
+  {
+    "source_id": "tvp_info",
+    "name": "TVP Info",
+    "source_type": "broadcaster",
+    "country": "Poland",
+    "language": "pl",
+    "political_leaning": "right-leaning",
+    "feed_url": "https://www.tvp.info/rss",
+    "active": false,
+    "notes": "Best-guess feed; verification returned 404 on 2026-07-08."
+  },
+  {
+    "source_id": "gazeta_polska",
+    "name": "Gazeta Polska",
+    "source_type": "magazine",
+    "country": "Poland",
+    "language": "pl",
+    "political_leaning": "right-leaning",
+    "feed_url": "https://niezalezna.pl/feed",
+    "notes": "Best-guess feed; verify before relying on it."
+  },
+  {
+    "source_id": "newsweek_polska",
+    "name": "Newsweek Polska",
+    "source_type": "magazine",
+    "country": "Poland",
+    "language": "pl",
+    "political_leaning": "left-leaning",
+    "feed_url": "https://www.newsweek.pl/rss.xml",
+    "notes": "Best-guess feed; verify before relying on it."
+  },
+  {
+    "source_id": "dziennik_gazeta_prawna",
+    "name": "Dziennik Gazeta Prawna",
+    "source_type": "newspaper",
+    "country": "Poland",
+    "language": "pl",
+    "political_leaning": "centrist",
+    "feed_url": "https://www.gazetaprawna.pl/rss",
+    "active": false,
+    "notes": "Best-guess feed; verification returned 404 on 2026-07-08."
+  },
+  {
+    "source_id": "super_express",
+    "name": "Super Express",
+    "source_type": "newspaper",
+    "country": "Poland",
+    "language": "pl",
+    "political_leaning": "centrist",
+    "feed_url": "https://www.se.pl/rss/",
+    "active": false,
+    "notes": "Best-guess feed; verification returned 404 on 2026-07-08."
+  },
+  {
+    "source_id": "fakt",
+    "name": "Fakt",
+    "source_type": "newspaper",
+    "country": "Poland",
+    "language": "pl",
+    "political_leaning": "centrist",
+    "feed_url": "https://www.fakt.pl/rss",
+    "notes": "Best-guess feed; verify before relying on it."
+  },
+  {
+    "source_id": "onet",
+    "name": "Onet",
+    "source_type": "portal",
+    "country": "Poland",
+    "language": "pl",
+    "political_leaning": "centrist",
+    "feed_url": "https://wiadomosci.onet.pl/rss",
+    "notes": "Best-guess feed; verify before relying on it."
+  },
+  {
+    "source_id": "interia",
+    "name": "Interia",
+    "source_type": "portal",
+    "country": "Poland",
+    "language": "pl",
+    "political_leaning": "centrist",
+    "feed_url": "https://wydarzenia.interia.pl/feed",
+    "notes": "Best-guess feed; verify before relying on it."
+  },
+  {
+    "source_id": "wp",
+    "name": "WP.pl",
+    "source_type": "portal",
+    "country": "Poland",
+    "language": "pl",
+    "political_leaning": "centrist",
+    "feed_url": "https://wiadomosci.wp.pl/rss.xml",
+    "notes": "Best-guess feed; verify before relying on it."
+  },
+  {
+    "source_id": "polskie_radio",
+    "name": "Polskie Radio",
+    "source_type": "broadcaster",
+    "country": "Poland",
+    "language": "pl",
+    "political_leaning": "centrist",
+    "feed_url": "https://polskieradio.pl/rss",
+    "active": false,
+    "notes": "Best-guess feed; verification timed out on 2026-07-08."
+  },
+  {
+    "source_id": "radio_zet",
+    "name": "Radio ZET",
+    "source_type": "broadcaster",
+    "country": "Poland",
+    "language": "pl",
+    "political_leaning": "centrist",
+    "feed_url": "https://wiadomosci.radiozet.pl/rss",
+    "active": false,
+    "notes": "Best-guess feed; verification returned 404 on 2026-07-08."
+  },
+  {
+    "source_id": "rmf_fm",
+    "name": "RMF FM",
+    "source_type": "broadcaster",
+    "country": "Poland",
+    "language": "pl",
+    "political_leaning": "centrist",
+    "feed_url": "https://www.rmf24.pl/fakty/feed",
+    "notes": "Best-guess feed; verify before relying on it."
+  },
+  {
+    "source_id": "warsaw_business_journal",
+    "name": "Warsaw Business Journal",
+    "source_type": "publication",
+    "country": "Poland",
+    "language": "en",
+    "political_leaning": "centrist",
+    "feed_url": "https://wbj.pl/rss",
+    "active": false,
+    "notes": "Best-guess feed; verification returned 404 on 2026-07-08."
+  },
+  {
+    "source_id": "tvp_world",
+    "name": "TVP World",
+    "source_type": "broadcaster",
+    "country": "Poland",
+    "language": "en",
+    "political_leaning": "centrist",
+    "feed_url": "https://tvpworld.com/rss",
+    "active": false,
+    "notes": "Best-guess feed; verification returned 404 on 2026-07-08."
+  }
+]

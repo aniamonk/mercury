@@ -1,0 +1,22 @@
+Cluster the following filtered media reports into up to {K} focused-analysis story cards for a UK diplomatic audience.
+
+Return a JSON object with a "stories" array. Each story must contain:
+- story_id: short kebab-case identifier.
+- story_title: factual title, maximum 12 words.
+- synthesis: 2-3 sentences explaining what happened, who is involved, and why it matters to a UK diplomatic audience.
+- framing_notes: 1-2 sentences explicitly naming outlets and how they framed the story.
+- member_report_ids: report IDs for the articles in the cluster.
+
+Rules:
+- A story is a single event or development covered by multiple outlets.
+- Only include stories covered by 2 or more articles.
+- Discard articles that do not fit a multi-source cluster.
+- Each report_id may appear at most once across all clusters.
+- Do not repeat report_ids within a cluster.
+- Do not speculate beyond the supplied article material.
+- Write in neutral diplomatic prose.
+- Output English regardless of source language.
+- Use only report_ids present in the input.
+
+Articles:
+{ARTICLES_JSON}

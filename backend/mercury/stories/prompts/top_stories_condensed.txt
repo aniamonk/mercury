@@ -1,0 +1,22 @@
+Cluster the following media reports into up to {K} dashboard story cards.
+
+Return a JSON object with a "stories" array. Each story must contain:
+- story_id: short kebab-case identifier.
+- story_title: factual title, maximum 10 words.
+- synthesis: one sentence, maximum 25 words.
+- framing_notes: one short sentence, maximum 25 words, naming outlets and framing.
+- member_report_ids: report IDs for the articles in the cluster.
+
+Rules:
+- A story is a single event or development covered by multiple outlets.
+- Only include stories covered by 2 or more articles.
+- Discard articles that do not fit a multi-source cluster.
+- Each report_id may appear at most once across all clusters.
+- Do not repeat report_ids within a cluster.
+- Write in neutral diplomatic prose.
+- Output English regardless of source language.
+- Use only report_ids present in the input.
+
+Articles:
+{ARTICLES_JSON}
+

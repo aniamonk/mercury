@@ -1,0 +1,25 @@
+[project]
+name = "mercury"
+version = "0.1.0"
+description = "Mercury — streaming media monitoring for diplomatic missions (local port of the Foundry/AIP prototype)"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+    "httpx>=0.27",
+    "feedparser>=6.0",
+    "aiosqlite>=0.20",
+    "openai>=1.40",
+    "pydantic>=2.7",
+    "python-dotenv>=1.0",
+]
+
+[project.scripts]
+mercury = "mercury.__main__:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["mercury"]
