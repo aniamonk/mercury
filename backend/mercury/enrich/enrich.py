@@ -11,7 +11,7 @@ from pathlib import Path
 import aiosqlite
 
 from mercury import config
-from mercury.enrich.llm import LLMUnavailable, enrich_article
+from mercury.enrich.llm import EnrichedArticle, LLMUnavailable, enrich_article
 from mercury.events import EventBus
 
 PROMPT_PATH = Path(__file__).parent / "prompts" / "enrich_article.txt"
@@ -22,6 +22,32 @@ EXTRA_SOURCE_BLOCKLIST = {
     "reuters",
     "tvp",
 }
+
+POLAND_RELEVANCE_MARKERS = (
+    "poland",
+    "polish",
+    "warsaw",
+    "sejm",
+    "senate of poland",
+    "law and justice",
+    "civic platform",
+    "donald tusk",
+    "karol nawrocki",
+    "andrzej duda",
+    "polish government",
+    "polish parliament",
+    "polsk",
+    "polsce",
+    "polski",
+    "polska",
+    "polskiej",
+    "warszaw",
+    "rząd pol",
+    "rzad pol",
+    "sejmu",
+    "nfz",
+    "zus",
+)
 
 
 def utc_now() -> str:
@@ -49,6 +75,7 @@ def build_prompt(article: aiosqlite.Row) -> str:
         "{REPORT_ID}": article["report_id"],
         "{TITLE}": article["title"],
         "{SOURCE}": article["source_domain"] or "",
+        "{SOURCE_COUNTRY}": article["source_country"] or "",
         "{PUBLISHED_DATE}": article["published_date"] or "",
         "{LLM_INPUT_TEXT}": article["llm_input_text"] or "",
     }
@@ -58,14 +85,51 @@ def build_prompt(article: aiosqlite.Row) -> str:
 
 
 async def fetch_new_articles(db: aiosqlite.Connection, limit: int) -> list[aiosqlite.Row]:
+    window = f"-{config.MONITOR_WINDOW_HOURS} hours"
     cursor = await db.execute(
         """SELECT * FROM articles
            WHERE status = 'new'
+             AND datetime(published_date) >= datetime('now', ?)
+             AND datetime(published_date) <= datetime('now')
            ORDER BY published_date DESC
            LIMIT ?""",
-        (limit,),
+        (window, limit),
     )
     return await cursor.fetchall()
+
+
+def _article_and_result_text(article: aiosqlite.Row, result: EnrichedArticle) -> str:
+    parts = [
+        article["title"] or "",
+        article["llm_input_text"] or "",
+        result.summary,
+        " ".join(entity.canonical_name for entity in result.entities),
+        " ".join(entity.surface_form for entity in result.entities),
+    ]
+    return " ".join(parts).casefold()
+
+
+def _has_poland_relevance(article: aiosqlite.Row, result: EnrichedArticle) -> bool:
+    text = _article_and_result_text(article, result)
+    return any(marker.casefold() in text for marker in POLAND_RELEVANCE_MARKERS)
+
+
+def _has_foreign_domestic_signal(article: aiosqlite.Row, result: EnrichedArticle) -> bool:
+    source_country = (article["source_country"] or "").casefold()
+    if source_country and source_country != "poland":
+        return True
+    return any(
+        entity.entity_type == "country" and entity.canonical_name.casefold() != "poland"
+        for entity in result.entities
+    )
+
+
+def _normalise_topic_scope(article: aiosqlite.Row, result: EnrichedArticle) -> EnrichedArticle:
+    if result.topic != "domestic" or _has_poland_relevance(article, result):
+        return result
+    if _has_foreign_domestic_signal(article, result):
+        return result.model_copy(update={"topic": "other"})
+    return result
 
 
 async def _upsert_entity(
@@ -101,7 +165,7 @@ async def _upsert_entity(
 
 async def enrich_one(db: aiosqlite.Connection, bus: EventBus, article: aiosqlite.Row) -> None:
     try:
-        result = await enrich_article(build_prompt(article))
+        result = _normalise_topic_scope(article, await enrich_article(build_prompt(article)))
         blocked_names = await source_blocklist(db)
         now = utc_now()
 
@@ -125,13 +189,14 @@ async def enrich_one(db: aiosqlite.Connection, bus: EventBus, article: aiosqlite
 
         await db.execute(
             """UPDATE articles
-               SET summary = ?, topic = ?, subtopics = ?, leaning = ?,
+               SET summary = ?, topic = ?, subtopics = ?, distilled_topics = ?, leaning = ?,
                    status = 'enriched', enriched_at = ?, enrich_error = NULL
                WHERE report_id = ?""",
             (
                 result.summary,
                 result.topic,
                 json.dumps(result.subtopics),
+                json.dumps(result.distilled_topics),
                 result.leaning,
                 now,
                 article["report_id"],
@@ -172,4 +237,3 @@ async def run_enrich_worker(db: aiosqlite.Connection, bus: EventBus) -> None:
             await asyncio.gather(*(enrich_one(db, bus, article) for article in articles))
         except LLMUnavailable:
             await asyncio.sleep(30)
-

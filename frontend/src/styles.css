@@ -129,7 +129,17 @@ main.bp5-dark {
 }
 
 .update-panel h3 {
-  margin: 0 0 8px;
+  margin: 0 0 4px;
+}
+
+.snapshot-meta {
+  margin-bottom: 8px;
+  color: #5f6b7c;
+  font-size: 12px;
+}
+
+.bp5-dark .snapshot-meta {
+  color: #abb3bf;
 }
 
 .update-stats,
@@ -164,14 +174,14 @@ main.bp5-dark {
   gap: 6px;
 }
 
-.panel-filters label span {
+.panel-filters label > span {
   font-size: 12px;
   font-weight: 700;
   text-transform: uppercase;
   color: #5f6b7c;
 }
 
-.bp5-dark .panel-filters label span,
+.bp5-dark .panel-filters label > span,
 .muted {
   color: #abb3bf;
 }

@@ -32,6 +32,52 @@ NON_NEWS_PATTERNS = [
     )
 ]
 
+POLAND_RELEVANCE_PATTERNS = [
+    re.compile(pattern, re.IGNORECASE)
+    for pattern in (
+        r"\bpoland\b",
+        r"\bpolish\b",
+        r"\bwarsaw\b",
+        r"\bgda[nń]sk\b",
+        r"\bkrak[oó]w\b",
+        r"\bwroc[lł]aw\b",
+        r"\bpozna[nń]\b",
+        r"\bpolska\b",
+        r"\bpolski\b",
+        r"\bpolskie\b",
+        r"\bpolskich\b",
+        r"\bpolsk[aąęiejimouy]*\b",
+        r"\brzeczpospolit[aąejy]*\b",
+        r"\bwarszaw[aąiey]*\b",
+        r"\bsejm(?:u|ie|em)?\b",
+        r"\bsenat(?:u|em|cie)?\b",
+        r"\brz[aą]d\s+pol",
+        r"\bprezydent\s+pol",
+        r"\bpremier\s+pol",
+        r"\btusk\b",
+        r"\bdonald\s+tusk\b",
+        r"\bduda\b",
+        r"\bandrzej\s+duda\b",
+        r"\bnawrocki\b",
+        r"\bkarol\s+nawrocki\b",
+        r"\bsikorski\b",
+        r"\brados[lł]aw\s+sikorski\b",
+        r"\btrzaskowski\b",
+        r"\bkaczy[nń]ski\b",
+        r"\bpis\b",
+        r"\bprawo\s+i\s+sprawiedliwo[sś][cć]\b",
+        r"\bplatforma\s+obywatelska\b",
+        r"\bkoalicja\s+obywatelska\b",
+        r"\bkonfederacja\b",
+        r"\blewica\b",
+        r"\btrzecia\s+droga\b",
+        r"\bsuwa[lł]ki\b",
+        r"\bukraine\s+through\s+poland\b",
+        r"\bpolish-ukrainian\b",
+        r"\bpolish\s+ukrainian\b",
+    )
+]
+
 
 class _HTMLStripper(HTMLParser):
     def __init__(self) -> None:
@@ -84,6 +130,15 @@ def is_non_news_item(title: str, description: str, url: str) -> bool:
     return any(pattern.search(searchable) for pattern in NON_NEWS_PATTERNS)
 
 
+def is_poland_source(source: SourceInfo) -> bool:
+    return (source.country or "").casefold() == "poland"
+
+
+def is_poland_relevant(title: str, description: str, url: str) -> bool:
+    searchable = f"{title} {description} {url}"
+    return any(pattern.search(searchable) for pattern in POLAND_RELEVANCE_PATTERNS)
+
+
 def clean_entry(entry: feedparser.FeedParserDict, source: SourceInfo, ingested_at: str | None = None) -> dict[str, Any] | None:
     title = clean_html(entry.get("title"))
     url = (entry.get("link") or entry.get("id") or "").strip()
@@ -92,6 +147,8 @@ def clean_entry(entry: feedparser.FeedParserDict, source: SourceInfo, ingested_a
 
     description = clean_html(entry.get("summary") or entry.get("description"))
     if is_non_news_item(title, description, url):
+        return None
+    if not is_poland_source(source) and not is_poland_relevant(title, description, url):
         return None
 
     llm_input_text = f"{title} | {description}"[:500]

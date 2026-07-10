@@ -41,6 +41,7 @@ class EnrichedArticle(BaseModel):
     leaning: str
     topic: str
     subtopics: list[str] = Field(default_factory=list)
+    distilled_topics: list[str] = Field(default_factory=list)
     entities: list[ExtractedEntity] = Field(default_factory=list)
 
     @field_validator("summary")
@@ -69,6 +70,19 @@ class EnrichedArticle(BaseModel):
         if invalid:
             raise ValueError(f"invalid subtopics: {invalid}")
         return value
+
+    @field_validator("distilled_topics")
+    @classmethod
+    def clean_distilled_topics(cls, value: list[str]) -> list[str]:
+        cleaned: list[str] = []
+        seen: set[str] = set()
+        for item in value:
+            topic = re.sub(r"\s+", " ", item).strip()
+            key = topic.lower()
+            if topic and key not in seen:
+                cleaned.append(topic[:60])
+                seen.add(key)
+        return cleaned[:5]
 
 
 class StoryCard(BaseModel):
@@ -182,4 +196,3 @@ async def generate_story_cards(prompt: str, workflow: bool = False) -> StoryList
         temperature=0.3,
         max_tokens=4000 if workflow else 1500,
     )
-

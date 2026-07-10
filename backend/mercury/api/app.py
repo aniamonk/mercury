@@ -27,16 +27,30 @@ from mercury.stories.stories import analyse_focused, refresh_dashboard_stories, 
 
 
 class AnalyseRequest(BaseModel):
+    categories: list[str] = Field(default_factory=list)
     topics: list[str] = Field(default_factory=list)
     subtopics: list[str] = Field(default_factory=list)
 
-    @field_validator("topics")
+    @field_validator("categories")
     @classmethod
-    def valid_topics(cls, value: list[str]) -> list[str]:
+    def valid_categories(cls, value: list[str]) -> list[str]:
         invalid = [item for item in value if item not in config.TOPICS]
         if invalid:
-            raise ValueError(f"invalid topics: {invalid}")
+            raise ValueError(f"invalid categories: {invalid}")
         return value
+
+    @field_validator("topics")
+    @classmethod
+    def clean_topics(cls, value: list[str]) -> list[str]:
+        cleaned: list[str] = []
+        seen: set[str] = set()
+        for item in value:
+            topic = re.sub(r"\s+", " ", item).strip()
+            key = topic.lower()
+            if topic and key not in seen:
+                cleaned.append(topic[:60])
+                seen.add(key)
+        return cleaned
 
     @field_validator("subtopics")
     @classmethod
@@ -79,6 +93,7 @@ def _article(row: aiosqlite.Row) -> dict[str, Any]:
         "summary": row["summary"],
         "topic": row["topic"],
         "subtopics": _json_array(row["subtopics"]),
+        "distilled_topics": _json_array(row["distilled_topics"] if "distilled_topics" in keys else None),
         "leaning": row["leaning"],
         "status": row["status"],
     }
@@ -110,6 +125,11 @@ def _entity(row: aiosqlite.Row) -> dict[str, Any]:
     }
 
 
+def _filter_option(value: str, count: int) -> dict[str, Any]:
+    label = value.replace("_", " ").replace("-", " ")
+    return {"value": value, "label": label, "count": count}
+
+
 async def _source_names(db: aiosqlite.Connection) -> set[str]:
     cursor = await db.execute("SELECT name FROM sources")
     rows = await cursor.fetchall()
@@ -127,6 +147,43 @@ async def _count_rows(db: aiosqlite.Connection, sql: str, params: tuple[Any, ...
     cursor = await db.execute(sql, params)
     row = await cursor.fetchone()
     return int(row[0])
+
+
+async def _monitoring_status(db: aiosqlite.Connection) -> dict[str, Any]:
+    window = f"-{config.MONITOR_WINDOW_HOURS} hours"
+    cursor = await db.execute(
+        """SELECT
+               COUNT(*) AS reports,
+               SUM(CASE WHEN status = 'enriched' THEN 1 ELSE 0 END) AS enriched,
+               SUM(CASE WHEN status = 'new' THEN 1 ELSE 0 END) AS pending,
+               SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) AS failed
+           FROM articles
+           WHERE datetime(published_date) >= datetime('now', ?)
+             AND datetime(published_date) <= datetime('now')""",
+        (window,),
+    )
+    row = await cursor.fetchone()
+    reports = int(row["reports"] or 0)
+    enriched = int(row["enriched"] or 0)
+    poll_cursor = await db.execute("SELECT MAX(last_polled_at) AS last_polled_at FROM sources")
+    poll_row = await poll_cursor.fetchone()
+    state_cursor = await db.execute(
+        """SELECT scope, last_attempted_at, last_successful_at, status,
+                  eligible_articles, story_count, detail
+           FROM story_refresh_state
+           WHERE scope IN ('domestic', 'poland_uk')
+           ORDER BY scope"""
+    )
+    return {
+        "window_hours": config.MONITOR_WINDOW_HOURS,
+        "reports": reports,
+        "enriched": enriched,
+        "pending": int(row["pending"] or 0),
+        "failed": int(row["failed"] or 0),
+        "coverage_percent": round((enriched / reports) * 100, 1) if reports else 100.0,
+        "last_polled_at": poll_row["last_polled_at"],
+        "story_scopes": [dict(state) for state in await state_cursor.fetchall()],
+    }
 
 
 async def _run_manual_enrichment(db: aiosqlite.Connection, bus: EventBus, limit: int) -> dict[str, int]:
@@ -210,17 +267,34 @@ def create_app() -> FastAPI:
         if scope not in {"domestic", "poland_uk", "focused"}:
             raise HTTPException(status_code=404, detail="unknown story scope")
         db: aiosqlite.Connection = request.app.state.db
+        window = f"-{config.MONITOR_WINDOW_HOURS} hours"
         cursor = await db.execute(
-            "SELECT * FROM stories WHERE scope = ? ORDER BY generated_at DESC, story_id",
-            (scope,),
+            """SELECT * FROM stories
+               WHERE scope = ?
+                 AND NOT EXISTS (
+                     SELECT 1
+                     FROM json_each(stories.member_report_ids) AS member
+                     LEFT JOIN articles ON articles.report_id = member.value
+                     WHERE articles.report_id IS NULL
+                        OR articles.status != 'enriched'
+                        OR datetime(articles.published_date) < datetime('now', ?)
+                        OR datetime(articles.published_date) > datetime('now')
+                 )
+               ORDER BY generated_at DESC, story_id""",
+            (scope, window),
         )
         return [_story(row) for row in await cursor.fetchall()]
+
+    @app.get("/api/monitoring/status")
+    async def monitoring_status(request: Request) -> dict[str, Any]:
+        db: aiosqlite.Connection = request.app.state.db
+        return await _monitoring_status(db)
 
     @app.post("/api/analyse")
     async def analyse(body: AnalyseRequest, request: Request) -> list[dict[str, Any]]:
         db: aiosqlite.Connection = request.app.state.db
         bus: EventBus = request.app.state.bus
-        cards = await analyse_focused(db, bus, topics=body.topics, subtopics=body.subtopics)
+        cards = await analyse_focused(db, bus, categories=body.categories, topics=body.topics, subtopics=body.subtopics)
         return [
             {
                 "scope": "focused",
@@ -233,6 +307,57 @@ def create_app() -> FastAPI:
             }
             for card in cards
         ]
+
+    @app.get("/api/filters")
+    async def filters(request: Request) -> dict[str, list[dict[str, Any]]]:
+        db: aiosqlite.Connection = request.app.state.db
+        window = f"-{config.MONITOR_WINDOW_HOURS} hours"
+        category_cursor = await db.execute(
+            """SELECT topic AS value, COUNT(*) AS count
+               FROM articles
+               WHERE status = 'enriched'
+                 AND topic IS NOT NULL AND topic != ''
+                 AND datetime(published_date) >= datetime('now', ?)
+                 AND datetime(published_date) <= datetime('now')
+               GROUP BY topic
+               ORDER BY count DESC, topic""",
+            (window,),
+        )
+        category_rows = await category_cursor.fetchall()
+
+        topic_cursor = await db.execute(
+            """SELECT value, SUM(count) AS count
+               FROM (
+                   SELECT json_each.value AS value, COUNT(*) AS count
+                   FROM articles, json_each(articles.distilled_topics)
+                   WHERE status = 'enriched'
+                     AND datetime(published_date) >= datetime('now', ?)
+                     AND datetime(published_date) <= datetime('now')
+                     AND json_each.value IS NOT NULL AND json_each.value != ''
+                   GROUP BY json_each.value
+                   UNION ALL
+                   SELECT json_each.value AS value, COUNT(*) AS count
+                   FROM articles, json_each(articles.subtopics)
+                   WHERE status = 'enriched'
+                     AND datetime(published_date) >= datetime('now', ?)
+                     AND datetime(published_date) <= datetime('now')
+                     AND json_each.value IS NOT NULL
+                     AND json_each.value != ''
+                     AND json_each.value NOT IN ('UK_Poland_bilateral', 'Poland_on_UK')
+                     AND json_array_length(COALESCE(NULLIF(articles.distilled_topics, ''), '[]')) = 0
+                   GROUP BY json_each.value
+               )
+               GROUP BY value
+               ORDER BY count DESC, value""",
+            (window, window),
+        )
+        topic_rows = await topic_cursor.fetchall()
+
+        category_order = {value: index for index, value in enumerate(config.TOPICS)}
+        categories = [_filter_option(row["value"], row["count"]) for row in category_rows]
+        categories.sort(key=lambda item: (category_order.get(item["value"], 999), item["label"]))
+        topics = [_filter_option(row["value"], row["count"]) for row in topic_rows]
+        return {"categories": categories, "topics": topics}
 
     @app.post("/api/update")
     async def update(body: UpdateRequest, request: Request) -> dict[str, Any]:
@@ -250,19 +375,21 @@ def create_app() -> FastAPI:
 
             stories_refreshed = False
             stories_skipped_reason = None
-            if body.refresh_stories and not config.OPENROUTER_API_KEY:
-                stories_skipped_reason = "OPENROUTER_API_KEY is not set"
-            elif body.refresh_stories and enrichment["enriched"] == 0:
-                stories_skipped_reason = "no new enriched articles"
-            elif body.refresh_stories:
-                await refresh_dashboard_stories(db, bus)
-                stories_refreshed = True
+            story_results: list[dict[str, object]] = []
+            if body.refresh_stories:
+                results = await refresh_dashboard_stories(db, bus)
+                story_results = [result.as_dict() for result in results]
+                stories_refreshed = any(result.changed for result in results)
+                retained = [result.scope for result in results if not result.changed]
+                if retained:
+                    stories_skipped_reason = f"previous cards retained for: {', '.join(retained)}"
 
             after_articles = await _count_rows(db, "SELECT COUNT(*) FROM articles")
             after_enriched = await _count_rows(db, "SELECT COUNT(*) FROM articles WHERE status = 'enriched'")
             pending = await _count_rows(db, "SELECT COUNT(*) FROM articles WHERE status = 'new'")
             failed = await _count_rows(db, "SELECT COUNT(*) FROM articles WHERE status = 'failed'")
             stories_count = await _count_rows(db, "SELECT COUNT(*) FROM stories")
+            coverage = await _monitoring_status(db)
             await bus.publish("update.complete", {"inserted": inserted, **enrichment})
 
             return {
@@ -278,7 +405,9 @@ def create_app() -> FastAPI:
                 "failed": failed,
                 "stories_refreshed": stories_refreshed,
                 "stories_skipped_reason": stories_skipped_reason,
+                "story_scopes": story_results,
                 "stories_count": stories_count,
+                "coverage": coverage,
             }
 
     @app.get("/api/entities/trending")
@@ -291,17 +420,68 @@ def create_app() -> FastAPI:
         excluded = {item.strip().lower() for item in (exclude or "").split(",") if item.strip()}
         excluded |= await _source_names(db)
         params: list[Any] = []
-        where = ""
+        excluded_clause = ""
         if excluded:
             placeholders = ",".join("?" for _ in excluded)
-            where = f"WHERE lower(entity_name) NOT IN ({placeholders})"
+            excluded_clause = f"AND lower(entity_name) NOT IN ({placeholders})"
             params.extend(sorted(excluded))
+        window = f"-{config.MONITOR_WINDOW_HOURS} hours"
+        history_window = f"-{config.MONITOR_WINDOW_HOURS * 8} hours"
+        params = [window, window, history_window, *params]
         params.append(limit)
         cursor = await db.execute(
-            f"""SELECT * FROM entity_stats
-                {where}
-                ORDER BY total_mention_count DESC, recent_mention_count DESC, entity_name
-                LIMIT ?""",
+            f"""WITH counts AS (
+                    SELECT
+                        e.entity_id,
+                        e.entity_name,
+                        e.entity_type,
+                        e.aliases,
+                        e.first_seen_date,
+                        SUM(CASE
+                            WHEN datetime(a.published_date) >= datetime('now', ?)
+                             AND datetime(a.published_date) <= datetime('now') THEN 1 ELSE 0
+                        END) AS recent_mentions,
+                        SUM(CASE
+                            WHEN datetime(a.published_date) < datetime('now', ?)
+                             AND datetime(a.published_date) >= datetime('now', ?) THEN 1 ELSE 0
+                        END) AS prior_mentions
+                    FROM entities AS e
+                    JOIN report_entity_links AS l ON l.entity_id = e.entity_id
+                    JOIN articles AS a ON a.report_id = l.report_id
+                    WHERE a.status = 'enriched'
+                    GROUP BY e.entity_id
+                ), current_entities AS (
+                    SELECT
+                        entity_id,
+                        entity_name,
+                        entity_type,
+                        aliases,
+                        first_seen_date,
+                        recent_mentions AS total_mention_count,
+                        recent_mentions AS recent_mention_count,
+                        CASE
+                            WHEN recent_mentions > 20 THEN 'key_actor'
+                            WHEN recent_mentions > 5 THEN 'regular'
+                            ELSE 'peripheral'
+                        END AS salience_tier,
+                        ROUND(
+                            CAST(recent_mentions AS REAL)
+                            / MAX(1.0, CAST(prior_mentions AS REAL) / 7.0),
+                            2
+                        ) AS mention_velocity
+                    FROM counts
+                    WHERE recent_mentions > 0
+                    {excluded_clause}
+                ), ranked AS (
+                    SELECT *, ROW_NUMBER() OVER (
+                        PARTITION BY COALESCE(entity_type, 'other')
+                        ORDER BY recent_mention_count DESC, mention_velocity DESC, entity_name
+                    ) AS type_rank
+                    FROM current_entities
+                )
+                SELECT * FROM ranked
+                WHERE type_rank <= ?
+                ORDER BY entity_type, type_rank""",
             params,
         )
         return [_entity(row) for row in await cursor.fetchall()]
@@ -309,24 +489,46 @@ def create_app() -> FastAPI:
     @app.get("/api/articles")
     async def articles(
         request: Request,
+        category: Annotated[list[str] | None, Query()] = None,
         topic: Annotated[list[str] | None, Query()] = None,
         subtopic: Annotated[list[str] | None, Query()] = None,
         limit: int = Query(default=50, ge=1, le=200),
     ) -> list[dict[str, Any]]:
         db: aiosqlite.Connection = request.app.state.db
-        where: list[str] = []
-        params: list[Any] = []
+        window = f"-{config.MONITOR_WINDOW_HOURS} hours"
+        where: list[str] = [
+            "datetime(published_date) >= datetime('now', ?)",
+            "datetime(published_date) <= datetime('now')",
+        ]
+        params: list[Any] = [window]
+        if category:
+            placeholders = ",".join("?" for _ in category)
+            where.append(f"topic IN ({placeholders})")
+            params.extend(category)
         if topic:
             placeholders = ",".join("?" for _ in topic)
-            where.append(f"topic IN ({placeholders})")
+            where.append(
+                f"""(
+                    EXISTS (
+                        SELECT 1 FROM json_each(articles.distilled_topics)
+                        WHERE value IN ({placeholders})
+                    )
+                OR EXISTS (
+                    SELECT 1 FROM json_each(articles.subtopics)
+                    WHERE json_array_length(COALESCE(NULLIF(articles.distilled_topics, ''), '[]')) = 0
+                      AND value IN ({placeholders})
+                )
+            )"""
+            )
+            params.extend(topic)
             params.extend(topic)
         if subtopic:
             placeholders = ",".join("?" for _ in subtopic)
             where.append(
                 f"""EXISTS (
-                    SELECT 1 FROM json_each(articles.subtopics)
-                    WHERE value IN ({placeholders})
-                )"""
+                SELECT 1 FROM json_each(articles.subtopics)
+                WHERE value IN ({placeholders})
+            )"""
             )
             params.extend(subtopic)
         clause = f"WHERE {' AND '.join(where)}" if where else ""

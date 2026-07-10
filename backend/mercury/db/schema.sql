@@ -42,6 +42,7 @@ CREATE TABLE IF NOT EXISTS articles (
     summary          TEXT,
     topic            TEXT,
     subtopics        TEXT DEFAULT '[]',         -- JSON array from the controlled list
+    distilled_topics TEXT DEFAULT '[]',         -- JSON array of dynamic article-level topic labels
     leaning          TEXT,
     status           TEXT NOT NULL DEFAULT 'new',   -- new | enriched | failed
     enriched_at      TEXT,
@@ -76,6 +77,16 @@ CREATE TABLE IF NOT EXISTS stories (
     member_report_ids TEXT NOT NULL DEFAULT '[]',
     generated_at      TEXT NOT NULL,
     PRIMARY KEY (scope, story_id)
+);
+
+CREATE TABLE IF NOT EXISTS story_refresh_state (
+    scope               TEXT PRIMARY KEY,
+    last_attempted_at   TEXT NOT NULL,
+    last_successful_at  TEXT,
+    status              TEXT NOT NULL,          -- refreshed | empty | retained_error | retained_invalid
+    eligible_articles   INTEGER NOT NULL DEFAULT 0,
+    story_count         INTEGER NOT NULL DEFAULT 0,
+    detail              TEXT
 );
 
 -- Live entity aggregates. In Foundry these were materialized per batch run;

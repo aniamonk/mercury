@@ -17,19 +17,6 @@ import {
 import { ItemRenderer, MultiSelect } from "@blueprintjs/select";
 
 const API_BASE = import.meta.env.VITE_API_BASE ?? "";
-const TOPICS = ["defence", "economy", "diplomacy", "energy", "domestic", "other"];
-const SUBTOPICS = [
-  "UK_Poland_bilateral",
-  "Poland_on_UK",
-  "EU",
-  "NATO",
-  "Russia_Ukraine",
-  "Belarus",
-  "migration",
-  "Germany",
-  "USA",
-  "elections"
-];
 
 type Story = {
   scope: string;
@@ -68,8 +55,39 @@ type Article = {
   summary: string | null;
   topic: string | null;
   subtopics: string[];
+  distilled_topics: string[];
   leaning: string | null;
   status: string;
+};
+
+type FilterOption = {
+  value: string;
+  label: string;
+  count: number;
+};
+
+type FilterOptions = {
+  categories: FilterOption[];
+  topics: FilterOption[];
+};
+
+type StoryScopeStatus = {
+  scope: string;
+  status: "refreshed" | "empty" | "retained_error" | "retained_invalid";
+  eligible_articles: number;
+  story_count: number;
+  detail: string | null;
+};
+
+type MonitoringStatus = {
+  window_hours: number;
+  reports: number;
+  enriched: number;
+  pending: number;
+  failed: number;
+  coverage_percent: number;
+  last_polled_at: string | null;
+  story_scopes: StoryScopeStatus[];
 };
 
 type UpdateResult = {
@@ -88,7 +106,9 @@ type UpdateResult = {
   failed: number;
   stories_refreshed: boolean;
   stories_skipped_reason: string | null;
+  story_scopes: StoryScopeStatus[];
   stories_count: number;
+  coverage: MonitoringStatus;
 };
 
 async function apiGet<T>(path: string): Promise<T> {
@@ -120,7 +140,7 @@ function useMercuryEvents(onMercuryEvent: () => void) {
   }, [onMercuryEvent]);
 }
 
-const StringMultiSelect = MultiSelect.ofType<string>();
+const OptionMultiSelect = MultiSelect.ofType<FilterOption>();
 
 function FilterSelect({
   items,
@@ -128,50 +148,61 @@ function FilterSelect({
   placeholder,
   onChange
 }: {
-  items: string[];
+  items: FilterOption[];
   selected: string[];
   placeholder: string;
   onChange: (next: string[]) => void;
 }) {
-  const renderItem: ItemRenderer<string> = (item, { handleClick, modifiers }) => {
+  const selectedItems = items.filter((item) => selected.includes(item.value));
+  const renderItem: ItemRenderer<FilterOption> = (item, { handleClick, modifiers }) => {
     if (!modifiers.matchesPredicate) {
       return null;
     }
-    const isSelected = selected.includes(item);
+    const isSelected = selected.includes(item.value);
     return (
       <MenuItem
         active={modifiers.active}
         icon={isSelected ? "tick" : "blank"}
-        key={item}
+        key={item.value}
+        label={`${item.count}`}
         onClick={handleClick}
-        text={item}
+        text={item.label}
       />
     );
   };
 
   return (
-    <StringMultiSelect
+    <OptionMultiSelect
       fill
-      itemPredicate={(query, item) => item.toLowerCase().includes(query.toLowerCase())}
+      itemPredicate={(query, item) => `${item.label} ${item.value}`.toLowerCase().includes(query.toLowerCase())}
       itemRenderer={renderItem}
       items={items}
       noResults={<MenuItem disabled text="No matches" />}
       onItemSelect={(item) =>
-        onChange(selected.includes(item) ? selected.filter((value) => value !== item) : [...selected, item])
+        onChange(
+          selected.includes(item.value)
+            ? selected.filter((value) => value !== item.value)
+            : [...selected, item.value]
+        )
       }
       placeholder={placeholder}
-      selectedItems={selected}
-      tagRenderer={(item) => item}
+      selectedItems={selectedItems}
+      tagRenderer={(item) => item.label}
       tagInputProps={{
-        onRemove: (_tag, index) => onChange(selected.filter((_, itemIndex) => itemIndex !== index))
+        onRemove: (_tag, index) => {
+          const removed = selectedItems[index];
+          if (removed) {
+            onChange(selected.filter((value) => value !== removed.value));
+          }
+        }
       }}
     />
   );
 }
 
-function StoryCards({ stories }: { stories: Story[] }) {
+function StoryCards({ stories, emptyMessage = "No story clusters yet" }: { stories: Story[]; emptyMessage?: string }) {
   if (!stories.length) {
-    return <div className="empty-state">No story clusters yet</div>;
+    return <div className="empty-state">{emptyMessage}</div>;
   }
   return (
     <div className="story-stack">
@@ -206,7 +237,7 @@ function TrendingChart({ entities }: { entities: Entity[] }) {
 
   function renderBars(type: string) {
     const values = grouped[type] ?? [];
-    const max = Math.max(1, ...values.map((entity) => entity.total_mention_count));
+    const max = Math.max(1, ...values.map((entity) => entity.recent_mention_count));
 
     if (!values.length) {
       return <div className="empty-state">No {type} mentions yet</div>;
@@ -218,9 +249,9 @@ function TrendingChart({ entities }: { entities: Entity[] }) {
           <div className="entity-row" key={entity.entity_id}>
             <span className="entity-name">{entity.entity_name}</span>
             <div className="entity-track">
-              <div className="entity-fill" style={{ width: `${(entity.total_mention_count / max) * 100}%` }} />
+              <div className="entity-fill" style={{ width: `${(entity.recent_mention_count / max) * 100}%` }} />
             </div>
-            <span className="entity-count">{entity.total_mention_count}</span>
+            <span className="entity-count">{entity.recent_mention_count}</span>
           </div>
         ))}
       </div>
@@ -269,8 +300,10 @@ export default function App() {
   const [entities, setEntities] = useState<Entity[]>([]);
   const [sources, setSources] = useState<Source[]>([]);
   const [latestArticles, setLatestArticles] = useState<Article[]>([]);
+  const [filterOptions, setFilterOptions] = useState<FilterOptions>({ categories: [], topics: [] });
+  const [monitoring, setMonitoring] = useState<MonitoringStatus | null>(null);
+  const [categories, setCategories] = useState<string[]>([]);
   const [topics, setTopics] = useState<string[]>([]);
-  const [subtopics, setSubtopics] = useState<string[]>([]);
   const [selectedTab, setSelectedTab] = useState<string>("domestic");
   const [isAnalysing, setIsAnalysing] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
@@ -290,11 +323,13 @@ export default function App() {
     Promise.all([
       apiGet<Story[]>("/api/stories/domestic"),
       apiGet<Story[]>("/api/stories/poland_uk"),
-      apiGet<Entity[]>("/api/entities/trending?limit=28&exclude=Poland"),
+      apiGet<Entity[]>("/api/entities/trending?limit=10&exclude=Poland"),
       apiGet<Source[]>("/api/sources"),
-      apiGet<Article[]>("/api/articles?limit=10")
+      apiGet<Article[]>("/api/articles?limit=10"),
+      apiGet<FilterOptions>("/api/filters"),
+      apiGet<MonitoringStatus>("/api/monitoring/status")
     ])
-      .then(([domestic, polandUk, entityRows, sourceRows, articleRows]) => {
+      .then(([domestic, polandUk, entityRows, sourceRows, articleRows, filters, status]) => {
         if (cancelled) {
           return;
         }
@@ -303,6 +338,8 @@ export default function App() {
         setEntities(entityRows);
         setSources(sourceRows);
         setLatestArticles(articleRows);
+        setFilterOptions(filters);
+        setMonitoring(status);
         setError(null);
       })
       .catch((err: Error) => {
@@ -327,6 +364,7 @@ export default function App() {
         refresh_stories: refreshStories
       });
       setLastUpdate(result);
+      setMonitoring(result.coverage);
       setRefreshKey((value) => value + 1);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Update failed");
@@ -339,7 +377,7 @@ export default function App() {
     setIsAnalysing(true);
     setError(null);
     try {
-      const stories = await apiPost<Story[]>("/api/analyse", { topics, subtopics });
+      const stories = await apiPost<Story[]>("/api/analyse", { categories, topics });
       setFocusedStories(stories);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Analysis failed");
@@ -359,6 +397,11 @@ export default function App() {
               <div className="header-meta">
                 <Tag intent={activeSources ? "success" : "warning"}>{activeSources} active feeds</Tag>
                 <Tag minimal>{entities.length} tracked entities</Tag>
+                {monitoring && (
+                  <Tag intent={monitoring.pending > 0 ? "warning" : "success"} minimal>
+                    {monitoring.enriched}/{monitoring.reports} enriched · {monitoring.window_hours}h
+                  </Tag>
+                )}
               </div>
             </div>
           </div>
@@ -380,9 +423,16 @@ export default function App() {
           <section className="panel update-panel">
             <div>
               <H3>Manual Update</H3>
+              <div className="snapshot-meta">
+                Rolling {monitoring?.window_hours ?? 24}h snapshot
+                {monitoring?.last_polled_at ? ` · last poll ${monitoring.last_polled_at} UTC` : " · not polled yet"}
+              </div>
               <div className="update-stats">
                 <Tag minimal>{lastUpdate ? `${lastUpdate.inserted} new reports` : "New reports only"}</Tag>
-                <Tag minimal>{lastUpdate ? `${lastUpdate.enrichment.enriched} enriched` : `${latestArticles.length} latest loaded`}</Tag>
+                <Tag minimal>{monitoring ? `${monitoring.enriched}/${monitoring.reports} enriched` : "Coverage loading"}</Tag>
+                <Tag intent={monitoring?.pending ? "warning" : "success"} minimal>
+                  {monitoring ? `${monitoring.pending} pending` : "Pending loading"}
+                </Tag>
                 <Tag minimal>
                   {lastUpdate
                     ? lastUpdate.stories_refreshed
@@ -421,8 +471,26 @@ export default function App() {
         <section className="dashboard-grid">
           <div className="panel panel-stories">
             <Tabs id="top-stories" selectedTabId={selectedTab} onChange={(tabId) => setSelectedTab(String(tabId))}>
-              <Tab id="domestic" title="Top Domestic Stories" panel={<StoryCards stories={domesticStories} />} />
-              <Tab id="poland_uk" title="Top Poland-UK Stories" panel={<StoryCards stories={polandUkStories} />} />
+              <Tab
+                id="domestic"
+                title="Top Domestic Stories"
+                panel={
+                  <StoryCards
+                    emptyMessage={`No multi-source stories detected in the last ${monitoring?.window_hours ?? 24} hours`}
+                    stories={domesticStories}
+                  />
+                }
+              />
+              <Tab
+                id="poland_uk"
+                title="Top Poland-UK Stories"
+                panel={
+                  <StoryCards
+                    emptyMessage={`No multi-source stories detected in the last ${monitoring?.window_hours ?? 24} hours`}
+                    stories={polandUkStories}
+                  />
+                }
+              />
             </Tabs>
           </div>
 
@@ -435,11 +503,21 @@ export default function App() {
             <H3>Filters</H3>
             <label>
               <span>Category</span>
-              <FilterSelect items={TOPICS} selected={topics} placeholder="Select categories" onChange={setTopics} />
+              <FilterSelect
+                items={filterOptions.categories}
+                selected={categories}
+                placeholder="Select categories"
+                onChange={setCategories}
+              />
             </label>
             <label>
               <span>Topic</span>
-              <FilterSelect items={SUBTOPICS} selected={subtopics} placeholder="Select topics" onChange={setSubtopics} />
+              <FilterSelect
+                items={filterOptions.topics}
+                selected={topics}
+                placeholder="Select topics"
+                onChange={setTopics}
+              />
             </label>
             <Button fill icon="search" intent="primary" loading={isAnalysing} onClick={runAnalysis}>
               Analyse

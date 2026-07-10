@@ -91,6 +91,16 @@
     "notes": "Known-good WordPress feed."
   },
   {
+    "source_id": "kanal_zero",
+    "name": "Kanał Zero",
+    "source_type": "broadcaster",
+    "country": "Poland",
+    "language": "pl",
+    "political_leaning": "centrist",
+    "feed_url": "https://kanalzero.pl/feed/",
+    "notes": "Verified feed on 2026-07-08."
+  },
+  {
     "source_id": "kafkadesk",
     "name": "Kafkadesk",
     "source_type": "publication",
@@ -218,9 +228,18 @@
     "country": "Poland",
     "language": "pl",
     "political_leaning": "left-leaning",
-    "feed_url": "https://wyborcza.pl/pub/rss/wyborcza_kraj.xml",
-    "active": false,
-    "notes": "Best-guess feed; verification returned 404 on 2026-07-08."
+    "feed_url": "https://wyborcza.pl/pub/rss/wiadomosci.xml",
+    "notes": "Verified feed on 2026-07-08."
+  },
+  {
+    "source_id": "gazeta_pl",
+    "name": "Gazeta.pl",
+    "source_type": "portal",
+    "country": "Poland",
+    "language": "pl",
+    "political_leaning": "left-leaning",
+    "feed_url": "https://wiadomosci.gazeta.pl/pub/rss/wiadomosci.xml",
+    "notes": "Verified feed on 2026-07-08."
   },
   {
     "source_id": "rzeczpospolita",
@@ -261,7 +280,7 @@
     "political_leaning": "right-leaning",
     "feed_url": "https://www.tvp.info/rss",
     "active": false,
-    "notes": "Best-guess feed; verification returned 404 on 2026-07-08."
+    "notes": "No working public RSS verified on 2026-07-08."
   },
   {
     "source_id": "gazeta_polska",
@@ -292,7 +311,7 @@
     "political_leaning": "centrist",
     "feed_url": "https://www.gazetaprawna.pl/rss",
     "active": false,
-    "notes": "Best-guess feed; verification returned 404 on 2026-07-08."
+    "notes": "No working public RSS verified on 2026-07-08."
   },
   {
     "source_id": "super_express",
@@ -303,7 +322,7 @@
     "political_leaning": "centrist",
     "feed_url": "https://www.se.pl/rss/",
     "active": false,
-    "notes": "Best-guess feed; verification returned 404 on 2026-07-08."
+    "notes": "No working public RSS verified on 2026-07-08."
   },
   {
     "source_id": "fakt",
@@ -354,7 +373,7 @@
     "political_leaning": "centrist",
     "feed_url": "https://polskieradio.pl/rss",
     "active": false,
-    "notes": "Best-guess feed; verification timed out on 2026-07-08."
+    "notes": "No working public RSS verified on 2026-07-08."
   },
   {
     "source_id": "radio_zet",
@@ -365,7 +384,7 @@
     "political_leaning": "centrist",
     "feed_url": "https://wiadomosci.radiozet.pl/rss",
     "active": false,
-    "notes": "Best-guess feed; verification returned 404 on 2026-07-08."
+    "notes": "No working public RSS verified on 2026-07-08."
   },
   {
     "source_id": "rmf_fm",
@@ -378,6 +397,26 @@
     "notes": "Best-guess feed; verify before relying on it."
   },
   {
+    "source_id": "oko_press",
+    "name": "OKO.press",
+    "source_type": "publication",
+    "country": "Poland",
+    "language": "pl",
+    "political_leaning": "left-leaning",
+    "feed_url": "https://oko.press/feed",
+    "notes": "Verified feed on 2026-07-08."
+  },
+  {
+    "source_id": "biznes_alert",
+    "name": "BiznesAlert",
+    "source_type": "publication",
+    "country": "Poland",
+    "language": "pl",
+    "political_leaning": "centrist",
+    "feed_url": "https://biznesalert.pl/feed/",
+    "notes": "Verified feed on 2026-07-08."
+  },
+  {
     "source_id": "warsaw_business_journal",
     "name": "Warsaw Business Journal",
     "source_type": "publication",
@@ -386,7 +425,7 @@
     "political_leaning": "centrist",
     "feed_url": "https://wbj.pl/rss",
     "active": false,
-    "notes": "Best-guess feed; verification returned 404 on 2026-07-08."
+    "notes": "No parseable public RSS verified on 2026-07-08."
   },
   {
     "source_id": "tvp_world",
@@ -397,6 +436,6 @@
     "political_leaning": "centrist",
     "feed_url": "https://tvpworld.com/rss",
     "active": false,
-    "notes": "Best-guess feed; verification returned 404 on 2026-07-08."
+    "notes": "No working public RSS verified on 2026-07-08."
   }
 ]

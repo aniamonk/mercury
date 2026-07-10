@@ -5,7 +5,16 @@ Return a JSON object with exactly these fields:
 - leaning: one of {LEANINGS}.
 - topic: one of {TOPICS}.
 - subtopics: zero or more values from {SUBTOPICS}.
+- distilled_topics: 1 to 5 concise English topic labels distilled from this article.
 - entities: a list of objects with canonical_name, surface_form, and entity_type.
+
+Topic rules:
+- "domestic" means Poland's internal affairs only: Polish politics, law, courts, public services, society, health, education, or local administration.
+- Do not use "domestic" for another country's internal affairs. US immigration enforcement, US courts, UK local politics, and similar non-Polish internal stories should usually be "other" unless the article has clear defence, diplomacy, economy, or energy significance.
+- Use "diplomacy" for state-to-state relations, EU/NATO diplomacy, sanctions, summits, ambassadors, and treaty issues.
+- Use "defence" for military, NATO posture, security operations, weapons, war, and defence policy.
+- Use "economy" or "energy" when those are the main policy domains.
+- If none of the named policy domains fit and Poland is not the domestic subject, use "other".
 
 Entity rules:
 - entity_type must be one of {ENTITY_TYPES}.
@@ -14,9 +23,16 @@ Entity rules:
 - Do not extract the publishing outlet as an entity.
 - Output English labels where there is a standard English form.
 
+Distilled topic rules:
+- Use specific but reusable labels such as "NATO summit", "hospital funding", "Trump legal cases", or "Russia-Ukraine war".
+- Do not use outlet names as topics.
+- Do not repeat the broad category or controlled subtopic unless it is genuinely the clearest article topic.
+- Keep each label under 6 words.
+
 Article:
 report_id: {REPORT_ID}
 source: {SOURCE}
+source_country: {SOURCE_COUNTRY}
 published_date: {PUBLISHED_DATE}
 title: {TITLE}
 text: {LLM_INPUT_TEXT}

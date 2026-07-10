@@ -22,6 +22,7 @@ async def get_db() -> aiosqlite.Connection:
         await _db.execute("PRAGMA journal_mode=WAL")
         await _db.execute("PRAGMA foreign_keys=ON")
         await _db.executescript(SCHEMA_PATH.read_text())
+        await _migrate(_db)
         await _seed_sources(_db)
         await _db.commit()
     return _db
@@ -35,17 +36,34 @@ async def close_db() -> None:
 
 
 async def _seed_sources(db: aiosqlite.Connection) -> None:
-    """Insert registry rows that aren't present yet; never overwrites edits."""
+    """Upsert registry metadata while preserving poll state columns."""
     sources = json.loads(SEED_PATH.read_text())
     for s in sources:
         await db.execute(
-            """INSERT OR IGNORE INTO sources
+            """INSERT INTO sources
                (source_id, name, source_type, country, language,
                 political_leaning, feed_url, active, notes)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+               ON CONFLICT(source_id) DO UPDATE SET
+                   name = excluded.name,
+                   source_type = excluded.source_type,
+                   country = excluded.country,
+                   language = excluded.language,
+                   political_leaning = excluded.political_leaning,
+                   feed_url = excluded.feed_url,
+                   active = excluded.active,
+                   notes = excluded.notes""",
             (
                 s["source_id"], s["name"], s["source_type"], s["country"],
                 s["language"], s["political_leaning"], s.get("feed_url"),
                 1 if s.get("active", bool(s.get("feed_url"))) else 0, s.get("notes"),
             ),
         )
+
+
+async def _migrate(db: aiosqlite.Connection) -> None:
+    """Small idempotent migrations for local SQLite databases."""
+    cursor = await db.execute("PRAGMA table_info(articles)")
+    columns = {row["name"] for row in await cursor.fetchall()}
+    if "distilled_topics" not in columns:
+        await db.execute("ALTER TABLE articles ADD COLUMN distilled_topics TEXT DEFAULT '[]'")
