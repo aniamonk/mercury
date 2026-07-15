@@ -1,8 +1,8 @@
-![Mercury dashboard](mercury_screenshot.png)
-
 # Mercury
 
-Mercury is a local diplomatic media-intelligence dashboard. It ingests RSS reporting, deduplicates articles, enriches selected new reports with LLM-generated metadata, and presents top stories, entity trends, latest reports, and focused analysis for policy and embassy workflows.
+![Mercury dashboard](mercury_screenshot.png)
+
+Mercury is a media-intelligence dashboard. It ingests RSS reporting, deduplicates articles, enriches selected new reports with LLM-generated metadata, and presents top stories, entity trends, latest reports, and focused analysis.
 
 The current app is intentionally manual-refresh by default. This keeps token spend predictable while testing with real content.
 
